@@ -1,0 +1,1 @@
+[![Build Status](https://travis-ci.org/Teaspot-Studio/arhelk-core.svg)](https://travis-ci.org/Teaspot-Studio/arhelk-core)

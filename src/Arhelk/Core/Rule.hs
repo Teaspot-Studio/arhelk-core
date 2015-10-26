@@ -1,4 +1,4 @@
-module Arhelk.Russian.Rule(
+module Arhelk.Core.Rule(
     Rule
   , RuleM
   , propose

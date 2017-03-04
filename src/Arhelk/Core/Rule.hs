@@ -10,10 +10,11 @@ module Arhelk.Core.Rule(
   ) where
 
 import Control.Monad.Reader
+import Control.Monad.Trans.RSS.Strict
 import Control.Monad.Writer
 import Lens.Simple
 
-newtype RuleM a b c = RuleM { unRuleM :: ReaderT a (WriterT b Identity) c }
+newtype RuleM a b c = RuleM { unRuleM :: RSST a b () Identity c }
   deriving (Functor, Applicative, Monad, MonadReader a, MonadWriter b)
 
 type Rule a = RuleM a [a] ()
@@ -25,7 +26,7 @@ type Rule a = RuleM a [a] ()
 --
 -- >>> propose fieldA valueA $ imply fieldB valueB
 -- [{ fieldA = valueA, fieldB = valueB }]
--- 
+--
 -- >>> propose fieldA valueA (imply fieldB valueB1 >> imply fieldB valueB2)
 -- [{ fieldA = valueA, fieldB = valueB1 }, { fieldA = valueA, fieldB = valueB2 }]
 propose :: Setter a a' b (Maybe b') -> b' -> RuleM r [a] c -> RuleM r [a'] c
@@ -38,13 +39,13 @@ propose field v = proposeMany field [v]
 --
 -- >>> proposeMany fieldA [valueA1, valueA2] $ imply fieldB valueB
 -- [{ fieldA = Just valueA1, fieldB = Just valueB }, { fieldA = Just valueA2, fieldB = Just valueB }]
--- 
+--
 -- >>> propose fieldA [valueA1, valueA2] (imply fieldB valueB1 >> imply fieldB valueB2)
 -- [{ fieldA = Just valueA1, fieldB = Just valueB1 }, { fieldA = Just valueA1, fieldB = Just valueB2 }, { fieldA = Just valueA2, fieldB = Just valueB1 }, { fieldA = Just valueA2, fieldB = Just valueB2 }]
 proposeMany :: Setter a a' b (Maybe b') -> [b'] -> RuleM r [a] c -> RuleM r [a'] c
 proposeMany field vs (RuleM subrule) = do
-  r <- ask 
-  let Identity (c, ws) = runWriterT (runReaderT subrule r)
+  r <- ask
+  let Identity (c, _, ws) = runRSST subrule r ()
   tell $ concat $ (\v -> set field (Just v) <$> ws) <$> vs
   return c
 
@@ -53,7 +54,7 @@ proposeMany field vs (RuleM subrule) = do
 -- >>> imply fieldA valueA
 -- { fieldA = Just valueA, fieldB = Nothing, ... }
 imply :: Setter a a' b (Maybe b') -> b' -> RuleM a [a'] ()
-imply field v = do 
+imply field v = do
   a <- ask
   tell [set field (Just v) a]
 
@@ -71,11 +72,11 @@ implyNothing = do
 -- @implyMap f rule@ will apply __f__ to each hypothesis produced by __rule__
 implyMap :: (a -> [a']) -> RuleM r [a] c -> RuleM r [a'] c
 implyMap f (RuleM rule) = do
-  r <- ask 
-  let Identity (c, ws) = runWriterT (runReaderT rule r)
+  r <- ask
+  let Identity (c, _, ws) = runRSST rule r ()
   tell $ concat $ f <$> ws
-  return c 
+  return c
 
 -- | Runs rule and returns list of all produced hypothesises
 runRule :: Monoid a => Rule a -> [a]
-runRule = snd . runIdentity . runWriterT . flip runReaderT mempty . unRuleM
+runRule = (\(_, _, a) -> a) . runIdentity . (\ m -> runRSST m mempty ()) . unRuleM

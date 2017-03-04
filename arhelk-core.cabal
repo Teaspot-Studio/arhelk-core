@@ -1,6 +1,6 @@
 name:                arhelk-core
 version:             0.1.0.0
-synopsis:            Core representation of languages in Arhelk system. All languages shares the design. 
+synopsis:            Core representation of languages in Arhelk system. All languages shares the design.
 description:         Please see README.md
 homepage:            https://github.com/Teaspot-Studio/arhelk-core
 license:             BSD3
@@ -19,10 +19,11 @@ library
   build-depends:       base >= 4.7 && < 5
                      , lens-simple
                      , mtl
+                     , stateWriter          >= 0.2  && < 0.3
                      , text
                      , text-show
   default-language:    Haskell2010
-  default-extensions:  
+  default-extensions:
                        DeriveFunctor
                        FlexibleInstances
                        GeneralizedNewtypeDeriving
